@@ -1,14 +1,18 @@
 package org.huffman;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class Main {
     public static void main(String[] args) throws IOException {
         String option = "c"; // compress or decompress
-        String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\Algorithms - Lectures 7 (Greedy algorithms).pdf";
+        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\Algorithms - Lectures 7 (Greedy algorithms).pdf";
+        String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\hello.txt";
         String nChar = "1";
+        byte[] bytes = new byte[]{12, 13, 14, 15};
+        System.out.println(Arrays.toString(bytes));
         int n = Integer.parseInt(nChar);
         if ("c".equals(option)) {
             // compress
@@ -27,12 +31,12 @@ public class Main {
         byte[] chunk = new byte[512 * n];
         int read = 0;
         while ( (read = fis.read(chunk)) > 0) {
-            huffmanCompressionHandler.calculateFrequency(chunk);
+            huffmanCompressionHandler.calculateFrequency(chunk, read);
         }
         HuffmanCode huffmanCode = new HuffmanCode();
         huffmanCode.buildTree(huffmanCompressionHandler.getFrequencyMap());
-        Map<List<Byte>, List<Byte>> codewordTable = huffmanCode.buildCodewordTable();
-        huffmanCompressionHandler.writeCompressedFile(codewordTable);
+        Map<List<Byte>, List<Boolean>> codewordTable = huffmanCode.buildCodewordTable();
+        huffmanCompressionHandler.writeCompressedFile(codewordTable, huffmanCode.getPaddingLength());
         fis.close();
     }
 

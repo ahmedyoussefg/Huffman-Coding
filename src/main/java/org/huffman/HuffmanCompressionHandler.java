@@ -9,6 +9,7 @@ import java.util.Map;
 public class HuffmanCompressionHandler {
     private final int n;
     // frequencies of groups of bytes
+    // TODO: Can't use List<Byte> in hashmap
     private Map<List<Byte>, Integer> freq;
     private File inputFile;
     private List<Byte> minimumBytesGroup;
@@ -23,9 +24,9 @@ public class HuffmanCompressionHandler {
         maximumBytesGroupLength = Integer.MIN_VALUE;
     }
 
-    void calculateFrequency(byte[] chunk) {
+    void calculateFrequency(byte[] chunk, int read) {
         // TODO: Last group is not added, if totSize not multiple of n
-        for (int i = 0; i < chunk.length - n + 1; i++) {
+        for (int i = 0; i < Math.min(chunk.length, read) - n + 1; i++) {
             List<Byte> group = new ArrayList<>();
             for (int j = i; j < i + n; j++) {
                 group.add(chunk[j]);
@@ -48,59 +49,116 @@ public class HuffmanCompressionHandler {
         return freq;
     }
 
-    public void writeCompressedFile(Map<List<Byte>, List<Byte>> codewordTable) throws IOException {
+    public void writeCompressedFile(Map<List<Byte>, List<Boolean>> codewordTable, int paddingLength) throws IOException {
         String path = inputFile.getParentFile().getAbsolutePath() + File.separator;
         String outputFileName = "21010217." + n + "." + inputFile.getName() + ".hc";
         File outputFile = new File(path + outputFileName);
         FileOutputStream fos = new FileOutputStream(outputFile);
-        writeHeader(fos, codewordTable);
+        writeHeader(fos, codewordTable, paddingLength);
         writeData(fos, codewordTable);
         fos.close();
     }
 
-    private void writeHeader(FileOutputStream fos, Map<List<Byte>, List<Byte>> codewordTable) throws IOException {
+    private void writeHeader(FileOutputStream fos, Map<List<Byte>, List<Boolean>> codewordTable, int paddingLength) throws IOException {
+        // n
         writeIntegerToFile(fos, n);
+        // number of entries
+        writeIntegerToFile(fos, codewordTable.size());
+        // number of padded 0 bits at the end of the file
+        writeIntegerToFile(fos, paddingLength);
 
-        // write the minimum bytes group, if There was
-        if (maximumBytesGroupLength != minimumBytesGroupLength) {
-            writeIntegerToFile(fos, minimumBytesGroupLength);
-            writeMapping(fos, minimumBytesGroup, codewordTable);
-        }
-        else {
-            // write 0
-            writeIntegerToFile(fos, 0);
-            minimumBytesGroupLength = 0;
-        }
-
-        writeAllMappings(fos, codewordTable);
+        writeAllKeysInMap(fos, codewordTable);
+        writeAllValuesInMap(fos, codewordTable);
     }
 
-    private void writeData(FileOutputStream fos, Map<List<Byte>, List<Byte>> codewordTable) throws IOException {
+    private void writeAllValuesInMap(FileOutputStream fos, Map<List<Byte>, List<Boolean>> codewordTable) throws IOException {
+        List<Boolean> currentBits = new ArrayList<>();
+        // save the minimum bytes group for the last
+        for (Map.Entry<List<Byte>, List<Boolean>> entry : codewordTable.entrySet()){
+            if ((maximumBytesGroupLength != minimumBytesGroupLength) &&
+                    (minimumBytesGroupLength == entry.getKey().size())) {
+                continue;
+            }
+            currentBits.addAll(entry.getValue());
+            while (currentBits.size() >= 8) {
+                convertFirst8BitsToByte(fos, currentBits);
+            }
+
+        }
+        if (maximumBytesGroupLength != minimumBytesGroupLength) {
+            currentBits.addAll(codewordTable.get(minimumBytesGroup));
+            while (currentBits.size() >= 8) {
+                convertFirst8BitsToByte(fos, currentBits);
+            }
+        }
+        // pad with zeros if not empty then convert to byte
+        if (currentBits.size() != 0 && currentBits.size() < 8) {
+            for (int i = 0; i < 8 - currentBits.size(); i++) {
+                currentBits.add(false);
+            }
+            convertFirst8BitsToByte(fos, currentBits);
+        }
+    }
+
+    private void writeData(FileOutputStream fos, Map<List<Byte>, List<Boolean>> codewordTable) throws IOException {
         FileInputStream fis = new FileInputStream(inputFile);
         byte[] chunk = new byte[512 * n];
         int read = 0;
         while ( (read = fis.read(chunk)) > 0) {
-            rewriteChunkUsingCodes(fos, chunk, codewordTable);
+            rewriteChunkUsingCodes(fos, chunk, codewordTable, read);
         }
+        fis.close();
     }
 
     private void rewriteChunkUsingCodes(FileOutputStream fos, byte[] chunk,
-                                        Map<List<Byte>, List<Byte>> codewordTable) throws IOException {
+                                        Map<List<Byte>, List<Boolean>> codewordTable, int read) throws IOException {
         List<Byte> current = new ArrayList<>();
-        for (int i = 0; i < chunk.length; ++i) {
+        List<Boolean> currentBits = new ArrayList<>();
+        for (int i = 0; i < Math.min(chunk.length, read); ++i) {
             current.add(chunk[i]);
             if (codewordTable.containsKey(current)){
-                fos.write(convertFromByteList(codewordTable.get(current)));
+                // fos.write(convertFromByteList(codewordTable.get(current)));
+                currentBits.addAll(codewordTable.get(current));
+                while (currentBits.size() >= 8) {
+                    convertFirst8BitsToByte(fos, currentBits);
+                }
                 current.clear();
             }
         }
+        // pad with zeros if not empty then convert to byte
+        if (currentBits.size() != 0 && currentBits.size() < 8) {
+            for (int i = 0; i < 8 - currentBits.size(); i++) {
+                currentBits.add(false);
+            }
+            convertFirst8BitsToByte(fos, currentBits);
+        }
     }
 
-    private void writeAllMappings(FileOutputStream fos, Map<List<Byte>, List<Byte>> codewordTable) throws IOException {
-        for (Map.Entry<List<Byte>, List<Byte>> entry : codewordTable.entrySet()){   
-            if (entry.getKey().size() == minimumBytesGroupLength)
+    private void convertFirst8BitsToByte(FileOutputStream fos, List<Boolean> currentBits) throws IOException {
+        // TODO: Remove first 8 and write them using fos as a byte
+        byte value = 0;
+        for (int j = 0; j < 8; j++) {
+            // if it's a set bit
+            if (currentBits.get(j)) {
+                value |= (1<<(7-j));
+            }
+        }
+        fos.write(value);
+        currentBits.subList(0, 8).clear();
+    }
+
+    private void writeAllKeysInMap(FileOutputStream fos, Map<List<Byte>,
+            List<Boolean>> codewordTable) throws IOException {
+        // save the minimum bytes group for the last
+        for (Map.Entry<List<Byte>, List<Boolean>> entry : codewordTable.entrySet()){
+            if ((maximumBytesGroupLength != minimumBytesGroupLength) &&
+                    (minimumBytesGroupLength == entry.getKey().size())) {
                 continue;
-            writeMapping(fos, entry.getKey(), codewordTable);
+            }
+            fos.write(convertFromByteList(entry.getKey()));
+        }
+        if (maximumBytesGroupLength != minimumBytesGroupLength) {
+            fos.write(convertFromByteList(minimumBytesGroup));
         }
     }
 
@@ -110,13 +168,6 @@ public class HuffmanCompressionHandler {
         fos.write(numberBytes);
     }
 
-    private void writeMapping(FileOutputStream fos, List<Byte> actualValue,
-                             Map<List<Byte>, List<Byte>> codewordTable) throws IOException {
-        fos.write(convertFromByteList(actualValue));
-        List<Byte> huffmanCoded = codewordTable.get(actualValue);
-        writeIntegerToFile(fos, huffmanCoded.size());
-        fos.write(convertFromByteList(huffmanCoded));
-    }
     private byte[] convertFromByteList(List<Byte> byteList) {
         byte[] byteArray = new byte[byteList.size()];
         for (int i = 0; i < byteList.size(); i++) {

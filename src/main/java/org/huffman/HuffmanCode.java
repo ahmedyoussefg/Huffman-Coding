@@ -6,7 +6,8 @@ import java.util.*;
 
 public class HuffmanCode {
     private HuffmanTreeNode huffmanTreeRoot;
-    private Map<List<Byte>, List<Byte>> codewordTable;
+    private Map<List<Byte>, List<Boolean>> codewordTable;
+    private int totCodeLength = 0;
     public void buildTree(Map<List<Byte>, Integer> freq) {
         PriorityQueue<HuffmanTreeNode> pq = new PriorityQueue<>(Comparator.comparingInt(HuffmanTreeNode::getFreq));
         for (Map.Entry<List<Byte>, Integer> entry : freq.entrySet()){
@@ -21,29 +22,36 @@ public class HuffmanCode {
         }
         huffmanTreeRoot = pq.poll();
     }
-    public Map<List<Byte>, List<Byte>> buildCodewordTable() {
+    public Map<List<Byte>, List<Boolean>> buildCodewordTable() {
         // TODO: should map to List<Bit> or something instead
         codewordTable = new HashMap<>();
         dfs(huffmanTreeRoot, new ArrayList<>());
         return codewordTable;
     }
-    private void dfs(HuffmanTreeNode node, List<Byte> currentCode) {
+
+    private void dfs(HuffmanTreeNode node, List<Boolean> currentCode) {
         if (node.left == null && node.right == null) {
             // leaf node
             codewordTable.put(node.value, currentCode);
+            totCodeLength += currentCode.size();
             return;
         }
         if (node.left != null) {
-            currentCode.add((byte) 0);
+            currentCode.add(false);
             dfs(node.left, currentCode);
             currentCode.remove(currentCode.size() - 1);
         }
         if (node.right != null) {
-            currentCode.add((byte) 1);
+            currentCode.add(true);
             dfs(node.right, currentCode);
             currentCode.remove(currentCode.size() - 1);
         }
     }
+
+    public int getPaddingLength() {
+        return 8 - (totCodeLength % 8);
+    }
+
     private static class HuffmanTreeNode {
         private int freq;
         private final List<Byte> value;
