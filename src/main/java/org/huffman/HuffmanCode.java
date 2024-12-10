@@ -8,6 +8,7 @@ public class HuffmanCode {
     private HuffmanTreeNode huffmanTreeRoot;
     private Map<String, List<Boolean>> codewordTable;
     private int totCodeLength = 0;
+    private int payload = 0;
     public void buildTree(Map<String, Integer> freq) {
         PriorityQueue<HuffmanTreeNode> pq = new PriorityQueue<>(Comparator.comparingInt(HuffmanTreeNode::getFreq));
         for (Map.Entry<String, Integer> entry : freq.entrySet()){
@@ -33,6 +34,7 @@ public class HuffmanCode {
             // leaf node
             codewordTable.put(node.value, new ArrayList<>(currentCode));
             totCodeLength += currentCode.size();
+            payload += currentCode.size() * node.freq;
             return;
         }
         if (node.left != null) {
@@ -47,9 +49,14 @@ public class HuffmanCode {
         }
     }
 
-    public int getPaddingLength() {
-        return 8 - (totCodeLength % 8);
+    public int getTotalCodeLength() {
+        // paddingInValues = (8 - (totCodeLength % 8))%8;
+        return totCodeLength;
     }
+    public int getPayloadLength() {
+        return payload;
+    }
+
 
     private static class HuffmanTreeNode {
         private int freq;
