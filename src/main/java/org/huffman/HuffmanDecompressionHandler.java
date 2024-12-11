@@ -22,9 +22,9 @@ public class HuffmanDecompressionHandler {
         this.inputFile = inputFile;
     }
 
-    public int readInteger(FileInputStream fis) throws IOException {
+    public int readInteger(BufferedInputStream bis) throws IOException {
         byte[] numberBytes = new byte[4];
-        int read = fis.read(numberBytes);
+        int read = bis.read(numberBytes);
         if (read != 4) throw new IOException("Couldn't read integers");
         return getInteger(numberBytes);
     }
@@ -41,52 +41,58 @@ public class HuffmanDecompressionHandler {
         return n;
     }
 
-    public void process(FileInputStream fis) throws IOException {
+    public void process(BufferedInputStream bis) throws IOException {
         // Method to read N, minimumGroupLength, NumberOfEntries, totCodeLength, payloadLen, lengthsOfHuffmanCodings
-        n = readInteger(fis);
+        System.out.println("Reading header metadata..");
+        n = readInteger(bis);
 
-        minimumGroupLength = readInteger(fis);
+        minimumGroupLength = readInteger(bis);
 
-        numberOfEntries = readInteger(fis);
+        numberOfEntries = readInteger(bis);
 
-        totCodeLength = readInteger(fis);
+        totCodeLength = readInteger(bis);
 
-        payloadLength = readInteger(fis);
+        payloadLength = readInteger(bis);
 
-        readKeysAndLengthsOfHuffmanCodings(fis);
+        System.out.println("Reading keys and lengths of codings");
+        readKeysAndLengthsOfHuffmanCodings(bis);
 
         mapValuesToIndex = new HashMap<>();
-        ChunkBitLocation chunkBitLocation = readValuesOfHuffmanCodings(fis);
-        readAndWriteData(fis, chunkBitLocation);
+
+        System.out.println("Reading huffman codings");
+        ChunkBitLocation chunkBitLocation = readValuesOfHuffmanCodings(bis);
+
+        System.out.println("Decompressing the payload data..");
+        readAndWriteData(bis, chunkBitLocation);
     }
 
-    private void readKeysAndLengthsOfHuffmanCodings(FileInputStream fis) throws IOException {
+    private void readKeysAndLengthsOfHuffmanCodings(BufferedInputStream bis) throws IOException {
         lengthsOfHuffmanCodings = new int[numberOfEntries];
         keysInTable = new byte[numberOfEntries][];
 
         byte[] chunkForMinimumGroup = new byte[minimumGroupLength];
         byte[] chunkForLength = new byte[4];
-        int read = fis.read(chunkForMinimumGroup);
+        int read = bis.read(chunkForMinimumGroup);
         if (read != minimumGroupLength) throw new IOException("Couldn't read the minimum group.");
         keysInTable[0] = chunkForMinimumGroup;
-        read = fis.read(chunkForLength);
+        read = bis.read(chunkForLength);
         if (read != 4) throw new IOException("Couldn't read the length of minimum group's code.");
         lengthsOfHuffmanCodings[0] = getInteger(chunkForLength);
         for (int i = 1; i < numberOfEntries; i++){
             // Read group
             byte[] chunkForGroup = new byte[n];
-            read = fis.read(chunkForGroup);
+            read = bis.read(chunkForGroup);
             keysInTable[i] = chunkForGroup;
             if (read != n) throw new IOException("Couldn't read keys of HuffmanCodewordTable");
 
             // Read Length
-            read = fis.read(chunkForLength);
+            read = bis.read(chunkForLength);
             if (read != 4) throw new IOException("Couldn't read lengths of HuffmanCodes");
             lengthsOfHuffmanCodings[i]=getInteger(chunkForLength);
         }
     }
-    private ChunkBitLocation readValuesOfHuffmanCodings(FileInputStream fis) throws IOException {
-        byte[] chunk = new byte[512 * 1024];
+    private ChunkBitLocation readValuesOfHuffmanCodings(BufferedInputStream bis) throws IOException {
+        byte[] chunk = new byte[8192];
         int indexInChunk = 0;
         int indexInsideByte = 0;
         int read = 0;
@@ -96,7 +102,7 @@ public class HuffmanDecompressionHandler {
             StringBuilder currentBits = new StringBuilder();
             for (int j = 0; j < neededBits; j++) {
                 if (indexInChunk == Math.min(read, chunk.length) || firstTime) {
-                    read = fis.read(chunk);
+                    read = bis.read(chunk);
                     indexInChunk = 0;
                     indexInsideByte = 0;
                     firstTime = false;
@@ -126,7 +132,7 @@ public class HuffmanDecompressionHandler {
         return ((chunk >> (7 - indexInsideByte) & 1) == 1 ? "1" : "0");
     }
 
-    private void readAndWriteData(FileInputStream fis, ChunkBitLocation chunkBitLocation) throws IOException {
+    private void readAndWriteData(BufferedInputStream bis, ChunkBitLocation chunkBitLocation) throws IOException {
         String outputFilePath = inputFile.getParentFile().getAbsolutePath() + File.separator
                                 + "extracted." + inputFile.getName().replace(".hc","");
         File outputFile = new File(outputFilePath);
@@ -141,9 +147,9 @@ public class HuffmanDecompressionHandler {
             return;
         }
         // System.out.println(ans.toString());
-        byte[] chunk = new byte[512 * 1024];
+        byte[] chunk = new byte[8192];
         int read = 0;
-        while ( (read = fis.read(chunk)) > 0) {
+        while ( (read = bis.read(chunk)) > 0) {
             currentBits = getCurrentBits(bos, currentBits, chunk, read, 0, 0);
             if (payloadWritten >= payloadLength) {
                 break;
