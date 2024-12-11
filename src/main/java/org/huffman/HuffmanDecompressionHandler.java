@@ -54,41 +54,44 @@ public class HuffmanDecompressionHandler {
 
         payloadLength = readInteger(bis);
 
-        System.out.println("Reading keys and lengths of codings");
-        readKeysAndLengthsOfHuffmanCodings(bis);
+        System.out.println("Reading lengths of codings..");
+        readLengthsOfHuffmanCodings(bis);
+
+        System.out.println("Reading keys of codings..");
+        readKeysOfHuffmanCodings(bis);
 
         mapValuesToIndex = new HashMap<>();
 
-        System.out.println("Reading huffman codings");
+        System.out.println("Reading huffman codings..");
         ChunkBitLocation chunkBitLocation = readValuesOfHuffmanCodings(bis);
 
         System.out.println("Decompressing the payload data..");
         readAndWriteData(bis, chunkBitLocation);
     }
 
-    private void readKeysAndLengthsOfHuffmanCodings(BufferedInputStream bis) throws IOException {
+    private void readLengthsOfHuffmanCodings(BufferedInputStream bis) throws IOException {
         lengthsOfHuffmanCodings = new int[numberOfEntries];
+        byte[] chunk = new byte[4*numberOfEntries];
+        // Read Lengths
+        int read = bis.read(chunk);
+        for (int i = 0; i < numberOfEntries; i++) {
+            lengthsOfHuffmanCodings[i]=getInteger(new byte[] {
+                    chunk[4*i], chunk[4*i + 1], chunk[4*i + 2], chunk[4*i + 3]
+            });
+        }
+    }
+
+    private void readKeysOfHuffmanCodings(BufferedInputStream bis) throws IOException {
         keysInTable = new byte[numberOfEntries][];
 
         byte[] chunkForMinimumGroup = new byte[minimumGroupLength];
-        byte[] chunkForLength = new byte[4];
         int read = bis.read(chunkForMinimumGroup);
-        if (read != minimumGroupLength) throw new IOException("Couldn't read the minimum group.");
         keysInTable[0] = chunkForMinimumGroup;
-        read = bis.read(chunkForLength);
-        if (read != 4) throw new IOException("Couldn't read the length of minimum group's code.");
-        lengthsOfHuffmanCodings[0] = getInteger(chunkForLength);
         for (int i = 1; i < numberOfEntries; i++){
             // Read group
             byte[] chunkForGroup = new byte[n];
             read = bis.read(chunkForGroup);
             keysInTable[i] = chunkForGroup;
-            if (read != n) throw new IOException("Couldn't read keys of HuffmanCodewordTable");
-
-            // Read Length
-            read = bis.read(chunkForLength);
-            if (read != 4) throw new IOException("Couldn't read lengths of HuffmanCodes");
-            lengthsOfHuffmanCodings[i]=getInteger(chunkForLength);
         }
     }
     private ChunkBitLocation readValuesOfHuffmanCodings(BufferedInputStream bis) throws IOException {
@@ -164,10 +167,6 @@ public class HuffmanDecompressionHandler {
                                          int initialChunkIndex, int initialBitIndex) throws IOException {
         for (int j = initialChunkIndex; j < Math.min(chunk.length, read); j++) {
             for (int k = initialBitIndex; k < 8; k++) {
-                if (j== 153 && k==2) {
-                    // TODO: Fix the bug here!
-                    System.out.println("HELP");
-                }
                 currentBits.append(getIthByte(k, chunk[j]));
                 if (mapValuesToIndex.containsKey(currentBits.toString())) {
                     byte[] b = keysInTable[mapValuesToIndex.get(currentBits.toString())];
