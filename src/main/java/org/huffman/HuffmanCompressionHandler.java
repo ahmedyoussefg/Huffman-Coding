@@ -31,6 +31,7 @@ public class HuffmanCompressionHandler {
             for (int j = i; j < Math.min(i + n, Math.min(chunk.length, read)); j++) {
                 group.append(chunk[j]).append(" ");
                 groupSize++;
+                // System.out.print(chunk[j] +", ");
             }
             // there's trailing space
             group.deleteCharAt(group.length() - 1);

@@ -146,7 +146,6 @@ public class HuffmanDecompressionHandler {
             bos.close();
             return;
         }
-        // System.out.println(ans.toString());
         byte[] chunk = new byte[8192];
         int read = 0;
         while ( (read = bis.read(chunk)) > 0) {
@@ -155,6 +154,8 @@ public class HuffmanDecompressionHandler {
                 break;
             }
         }
+        // System.out.println(ans.subList(0,ans.size()).toString());
+
         bos.flush();
         bos.close();
     }
@@ -163,6 +164,10 @@ public class HuffmanDecompressionHandler {
                                          int initialChunkIndex, int initialBitIndex) throws IOException {
         for (int j = initialChunkIndex; j < Math.min(chunk.length, read); j++) {
             for (int k = initialBitIndex; k < 8; k++) {
+                if (j== 153 && k==2) {
+                    // TODO: Fix the bug here!
+                    System.out.println("HELP");
+                }
                 currentBits.append(getIthByte(k, chunk[j]));
                 if (mapValuesToIndex.containsKey(currentBits.toString())) {
                     byte[] b = keysInTable[mapValuesToIndex.get(currentBits.toString())];
