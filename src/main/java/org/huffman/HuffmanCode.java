@@ -34,7 +34,6 @@ public class HuffmanCode {
             // leaf node
             codewordTable.put(node.value, new ArrayList<>(currentCode));
             totCodeLength += currentCode.size();
-            payload += currentCode.size() * node.freq;
             return;
         }
         if (node.left != null) {
@@ -52,9 +51,6 @@ public class HuffmanCode {
     public int getTotalCodeLength() {
         // paddingInValues = (8 - (totCodeLength % 8))%8;
         return totCodeLength;
-    }
-    public int getPayloadLength() {
-        return payload;
     }
 
 

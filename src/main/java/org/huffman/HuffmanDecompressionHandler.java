@@ -32,7 +32,7 @@ public class HuffmanDecompressionHandler {
     private static int getInteger(byte[] numberBytes) {
         int number = 0;
         for (int i = 0; i < 4; i++) {
-            number |= (((int) numberBytes[i]) << (24 - 8*i));
+            number |= ((numberBytes[i] & 0xFF) << (24 - 8*i));
         }
         return number;
     }
@@ -138,6 +138,7 @@ public class HuffmanDecompressionHandler {
         if (payloadWritten >= payloadLength) {
             bos.flush();
             bos.close();
+            return;
         }
         // System.out.println(ans.toString());
         byte[] chunk = new byte[512 * 1024];
@@ -160,7 +161,7 @@ public class HuffmanDecompressionHandler {
                 if (mapValuesToIndex.containsKey(currentBits.toString())) {
                     byte[] b = keysInTable[mapValuesToIndex.get(currentBits.toString())];
                     // ans.add(b[0]);
-                    payloadWritten += currentBits.length();
+                    payloadWritten += b.length;
                     bos.write(b);
                     currentBits = new StringBuilder();
                 }

@@ -9,11 +9,11 @@ public class Main {
     public static void main(String[] args) throws IOException {
         // TODO: Research using BOS instead of FOS
         // TODO: Research using BIS instead of FIS
-        String option = "d"; // compress or decompress
+        String option = "c"; // compress or decompress
         // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\hello.txt";
         // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.hello.txt.hc";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\Algorithms - Lectures 7 (Greedy algorithms).pdf";
-        String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.Algorithms - Lectures 7 (Greedy algorithms).pdf.hc";
+        String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\Algorithms - Lectures 7 (Greedy algorithms).pdf";
+        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.Algorithms - Lectures 7 (Greedy algorithms).pdf.hc";
         if ("c".equals(option)) {
             String nChar = "1";
             int n = Integer.parseInt(nChar);
@@ -38,7 +38,7 @@ public class Main {
         HuffmanCode huffmanCode = new HuffmanCode();
         huffmanCode.buildTree(huffmanCompressionHandler.getFrequencyMap());
         Map<String, List<Boolean>> codewordTable = huffmanCode.buildCodewordTable();
-        huffmanCompressionHandler.writeCompressedFile(codewordTable, huffmanCode.getTotalCodeLength(), huffmanCode.getPayloadLength());
+        huffmanCompressionHandler.writeCompressedFile(codewordTable, huffmanCode.getTotalCodeLength());
         fis.close();
     }
 

@@ -1,6 +1,8 @@
 package org.huffman;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class HuffmanCompressionHandler {
@@ -50,17 +52,17 @@ public class HuffmanCompressionHandler {
         return freq;
     }
 
-    public void writeCompressedFile(Map<String, List<Boolean>> codewordTable, int totCodeLength, int payloadLength) throws IOException {
+    public void writeCompressedFile(Map<String, List<Boolean>> codewordTable, int totCodeLength) throws IOException {
         String path = inputFile.getParentFile().getAbsolutePath() + File.separator;
         String outputFileName = "21010217." + n + "." + inputFile.getName() + ".hc";
         File outputFile = new File(path + outputFileName);
         FileOutputStream fos = new FileOutputStream(outputFile);
-        writeHeader(fos, codewordTable, totCodeLength, payloadLength);
+        writeHeader(fos, codewordTable, totCodeLength);
         writeData(fos, codewordTable);
         fos.close();
     }
 
-    private void writeHeader(FileOutputStream fos, Map<String, List<Boolean>> codewordTable, int totCodeLength, int payloadLength) throws IOException {
+    private void writeHeader(FileOutputStream fos, Map<String, List<Boolean>> codewordTable, int totCodeLength) throws IOException {
         // n
         writeIntegerToFile(fos, n);
         writeIntegerToFile(fos, minimumBytesGroupLength);
@@ -68,7 +70,7 @@ public class HuffmanCompressionHandler {
         writeIntegerToFile(fos, codewordTable.size());
 
         writeIntegerToFile(fos, totCodeLength);
-        writeIntegerToFile(fos, payloadLength);
+        writeIntegerToFile(fos, (int) Files.size(Path.of(inputFile.getPath())));
 
         writeAllKeysAndValueLengthsInMap(fos, codewordTable);
         writeAllValuesInMap(fos, codewordTable);
@@ -139,7 +141,6 @@ public class HuffmanCompressionHandler {
     }
 
     private void convertFirst8BitsToByte(FileOutputStream fos, List<Boolean> currentBits) throws IOException {
-        // TODO: Remove first 8 and write them using fos as a byte
         byte value = 0;
         for (int j = 0; j < 8; j++) {
             // if it's a set bit
