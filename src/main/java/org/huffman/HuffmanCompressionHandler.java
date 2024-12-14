@@ -1,10 +1,10 @@
 package org.huffman;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HuffmanCompressionHandler {
     private final int n;
@@ -26,28 +26,34 @@ public class HuffmanCompressionHandler {
 
     void calculateFrequency(byte[] chunk, int read) {
         // TODO: Last group is not added, if totSize not multiple of n
-        for (int i = 0; i < Math.min(chunk.length, read); i+=n) {
-            StringBuilder group = new StringBuilder("");
+        // StringBuilder group = new StringBuilder();
+        byte[] group = new byte[n];
+        StringBuilder groupBuilder = new StringBuilder();
+        for (int i = 0; i < read; i+=n) {
+            // group.setLength(0);
             int groupSize = 0;
-            for (int j = i; j < Math.min(i + n, Math.min(chunk.length, read)); j++) {
-                group.append(chunk[j]).append(" ");
-                groupSize++;
-                // System.out.print(chunk[j] +", ");
+            for (int j = i; j < Math.min(i + n, read); j++) {
+                group[groupSize++] = chunk[j];
             }
-            // there's trailing space
-            group.deleteCharAt(group.length() - 1);
+            String groupStr = getStringOfGroup(group, groupSize, groupBuilder);
             if (groupSize < minimumBytesGroupLength) {
                 minimumBytesGroupLength = groupSize;
-                minimumBytesGroup = group.toString();
+                minimumBytesGroup = groupStr;
             }
             maximumBytesGroupLength = Math.max(maximumBytesGroupLength, groupSize);
-            if (freq.containsKey(group.toString())) {
-                freq.put(group.toString(), freq.get(group.toString()) + 1);
-            }
-            else {
-                freq.put(group.toString(), 1);
+            freq.put(groupStr, freq.getOrDefault(groupStr, 0) + 1);
+        }
+    }
+
+    private String getStringOfGroup(byte[] group, int groupSize, StringBuilder groupBuilder) {
+        groupBuilder.setLength(0);
+        for (int i = 0; i < groupSize; i++) {
+            groupBuilder.append(group[i]);
+            if (i < groupSize - 1) {
+                groupBuilder.append(" ");
             }
         }
+        return groupBuilder.toString();
     }
 
     public Map<String, Integer> getFrequencyMap() {
@@ -145,7 +151,7 @@ public class HuffmanCompressionHandler {
                 while (currentBits.size() >= 8) {
                     convertFirst8BitsToByte(bos, currentBits);
                 }
-                current = new StringBuilder();
+                current.setLength(0);
             }
         }
         return currentBits;
