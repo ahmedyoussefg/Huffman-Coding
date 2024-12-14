@@ -25,12 +25,11 @@ public class HuffmanCompressionHandler {
     }
 
     void calculateFrequency(byte[] chunk, int read) {
-        // TODO: Last group is not added, if totSize not multiple of n
-        // StringBuilder group = new StringBuilder();
         byte[] group = new byte[n];
         StringBuilder groupBuilder = new StringBuilder();
+        Map<String, Integer> localFreq = new HashMap<>();
         for (int i = 0; i < read; i+=n) {
-            // group.setLength(0);
+            groupBuilder.setLength(0);
             int groupSize = 0;
             for (int j = i; j < Math.min(i + n, read); j++) {
                 group[groupSize++] = chunk[j];
@@ -41,7 +40,15 @@ public class HuffmanCompressionHandler {
                 minimumBytesGroup = groupStr;
             }
             maximumBytesGroupLength = Math.max(maximumBytesGroupLength, groupSize);
-            freq.put(groupStr, freq.getOrDefault(groupStr, 0) + 1);
+            localFreq.put(groupStr, localFreq.getOrDefault(groupStr, 0) + 1);
+        }
+        mergeWithGlobalFreq(localFreq);
+    }
+
+    private synchronized void mergeWithGlobalFreq(Map<String, Integer> localFreq) {
+        for (Map.Entry<String, Integer> entry : localFreq.entrySet()) {
+            int oldValue = freq.getOrDefault(entry.getKey(), 0);
+            freq.put(entry.getKey(), oldValue + entry.getValue());
         }
     }
 
