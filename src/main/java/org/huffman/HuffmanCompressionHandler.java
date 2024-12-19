@@ -1,73 +1,55 @@
 package org.huffman;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class HuffmanCompressionHandler {
     private final int n;
     // frequencies of groups of bytes
-    // TODO: Can't use List<Byte> in hashmap
-    private Map<String, Integer> freq;
+    private Map<ByteArrayWrapper, Integer> freq;
     private File inputFile;
-    private String minimumBytesGroup;
+    private ByteArrayWrapper minimumBytesGroup;
     private int minimumBytesGroupLength;
-    private int maximumBytesGroupLength;
-
+    private final long inputFileSize;
+    byte[] group;
+    StringBuilder groupBuilder;
+    ByteArrayWrapper groupWrapper;
     public HuffmanCompressionHandler(int n, File inputFile) {
         this.n = n;
         freq = new HashMap<>();
         this.inputFile = inputFile;
+        this.inputFileSize = inputFile.length();
         minimumBytesGroupLength = Integer.MAX_VALUE;
-        maximumBytesGroupLength = Integer.MIN_VALUE;
+        groupBuilder = new StringBuilder();
+        groupWrapper = new ByteArrayWrapper();
+        group = new byte[n];
     }
 
-    void calculateFrequency(byte[] chunk, int read) {
-        byte[] group = new byte[n];
-        StringBuilder groupBuilder = new StringBuilder();
-        Map<String, Integer> localFreq = new HashMap<>();
+    void calculateFrequency(byte[] chunk, int read)  {
         for (int i = 0; i < read; i+=n) {
-            groupBuilder.setLength(0);
             int groupSize = 0;
             for (int j = i; j < Math.min(i + n, read); j++) {
                 group[groupSize++] = chunk[j];
             }
-            String groupStr = getStringOfGroup(group, groupSize, groupBuilder);
-            if (groupSize < minimumBytesGroupLength) {
+            byte[] groupWrapperData = Arrays.copyOf(group, groupSize);
+            ByteArrayWrapper groupKey = new ByteArrayWrapper(groupWrapperData);
+            if (groupSize != n) {
                 minimumBytesGroupLength = groupSize;
-                minimumBytesGroup = groupStr;
+                minimumBytesGroup = groupKey;
             }
-            maximumBytesGroupLength = Math.max(maximumBytesGroupLength, groupSize);
-            localFreq.put(groupStr, localFreq.getOrDefault(groupStr, 0) + 1);
-        }
-        mergeWithGlobalFreq(localFreq);
-    }
-
-    private synchronized void mergeWithGlobalFreq(Map<String, Integer> localFreq) {
-        for (Map.Entry<String, Integer> entry : localFreq.entrySet()) {
-            int oldValue = freq.getOrDefault(entry.getKey(), 0);
-            freq.put(entry.getKey(), oldValue + entry.getValue());
-        }
-    }
-
-    private String getStringOfGroup(byte[] group, int groupSize, StringBuilder groupBuilder) {
-        groupBuilder.setLength(0);
-        for (int i = 0; i < groupSize; i++) {
-            groupBuilder.append(group[i]);
-            if (i < groupSize - 1) {
-                groupBuilder.append(" ");
+            if (minimumBytesGroupLength == Integer.MAX_VALUE) {
+                minimumBytesGroupLength = n;
+                minimumBytesGroup = groupKey;
             }
+            freq.merge(groupKey, 1, Integer::sum);
         }
-        return groupBuilder.toString();
     }
 
-    public Map<String, Integer> getFrequencyMap() {
+    public Map<ByteArrayWrapper, Integer> getFrequencyMap() {
         return freq;
     }
 
-    public void writeCompressedFile(Map<String, List<Boolean>> codewordTable, int totCodeLength) throws IOException {
+    public void writeCompressedFile(Map<ByteArrayWrapper, List<Boolean>> codewordTable, int totCodeLength) throws IOException {
         String path = inputFile.getParentFile().getAbsolutePath() + File.separator;
         String outputFileName = "21010217." + n + "." + inputFile.getName() + ".hc";
         File outputFile = new File(path + outputFileName);
@@ -76,11 +58,15 @@ public class HuffmanCompressionHandler {
         System.out.println("Writing Headers..");
         writeHeader(bos, codewordTable, totCodeLength);
         System.out.println("Writing Data in Compressed Form..");
+        long writeDataTime= System.currentTimeMillis();
+        System.out.println("Number Of Entries in hashmap = " + freq.size());
         writeData(bos, codewordTable);
+        System.out.println("Write data time: ");
+        System.out.println((System.currentTimeMillis() - writeDataTime)/1000.0);
         bos.close();
     }
 
-    private void writeHeader(BufferedOutputStream bos, Map<String, List<Boolean>> codewordTable, int totCodeLength) throws IOException {
+    private void writeHeader(BufferedOutputStream bos, Map<ByteArrayWrapper, List<Boolean>> codewordTable, int totCodeLength) throws IOException {
         // n
         writeIntegerToFile(bos, n);
         writeIntegerToFile(bos, minimumBytesGroupLength);
@@ -88,7 +74,7 @@ public class HuffmanCompressionHandler {
         writeIntegerToFile(bos, codewordTable.size());
 
         writeIntegerToFile(bos, totCodeLength);
-        writeIntegerToFile(bos, (int) Files.size(Path.of(inputFile.getPath())));
+        writeIntegerToFile(bos, (int) inputFileSize);
 
         writeAllValueLengthsInMap(bos, codewordTable);
         writeAllKeysInMap(bos, codewordTable);
@@ -97,13 +83,13 @@ public class HuffmanCompressionHandler {
         bos.flush();
     }
 
-    private void writeAllValuesInMap(BufferedOutputStream bos, Map<String, List<Boolean>> codewordTable) throws IOException {
+    private void writeAllValuesInMap(BufferedOutputStream bos, Map<ByteArrayWrapper, List<Boolean>> codewordTable) throws IOException {
         // first write the minimum group value
         List<Boolean> currentBits = new ArrayList<>(codewordTable.get(minimumBytesGroup));
         while (currentBits.size() >= 8) {
             convertFirst8BitsToByte(bos, currentBits);
         }
-        for (Map.Entry<String, List<Boolean>> entry : codewordTable.entrySet()){
+        for (Map.Entry<ByteArrayWrapper, List<Boolean>> entry : codewordTable.entrySet()){
             if (entry.getKey().equals(minimumBytesGroup)) {
                 continue;
             }
@@ -123,10 +109,10 @@ public class HuffmanCompressionHandler {
         }
     }
 
-    private void writeData(BufferedOutputStream bos, Map<String, List<Boolean>> codewordTable) throws IOException {
+    private void writeData(BufferedOutputStream bos, Map<ByteArrayWrapper, List<Boolean>> codewordTable) throws IOException {
         FileInputStream fis = new FileInputStream(inputFile);
         BufferedInputStream bis = new BufferedInputStream(fis);
-        byte[] chunk = new byte[8192 * n];
+        byte[] chunk = new byte[1024 * 1024 * n];
         int read = 0;
         // System.out.println("========WRITEDATA==========");
         List<Boolean> currentBits = new ArrayList<>();
@@ -146,21 +132,23 @@ public class HuffmanCompressionHandler {
     }
 
     private List<Boolean> rewriteChunkUsingCodes(BufferedOutputStream bos, byte[] chunk,
-                                        Map<String, List<Boolean>> codewordTable, int read, List<Boolean> currentBits) throws IOException {
-        StringBuilder current = new StringBuilder();
-        for (int i = 0; i < Math.min(chunk.length, read); ++i) {
-            current.append(chunk[i]);
-            String tempCurrent = current.toString();
-            current.append(" ");
-            if (codewordTable.containsKey(tempCurrent)){
-                // bos.write(convertFromByteList(codewordTable.get(current)));
-                currentBits.addAll(codewordTable.get(tempCurrent));
-                while (currentBits.size() >= 8) {
-                    convertFirst8BitsToByte(bos, currentBits);
-                }
-                current.setLength(0);
+                                                 Map<ByteArrayWrapper, List<Boolean>> codewordTable, int read, List<Boolean> currentBits) throws IOException {
+        for (int i = 0; i < read; i += n) {
+            int groupSize = 0;
+            for (int j = i; j < Math.min(i + n, read); j++) {
+                group[groupSize++] = chunk[j];
+            }
+            if (groupSize == n) {
+                groupWrapper.setData(group);
+                currentBits.addAll(codewordTable.get(groupWrapper));
+            } else {
+                currentBits.addAll(codewordTable.get(minimumBytesGroup));
+            }
+            while (currentBits.size() >= 8) {
+                convertFirst8BitsToByte(bos, currentBits);
             }
         }
+
         return currentBits;
     }
 
@@ -177,24 +165,24 @@ public class HuffmanCompressionHandler {
         currentBits.subList(0, 8).clear();
     }
 
-    private void writeAllValueLengthsInMap(BufferedOutputStream bos, Map<String, List<Boolean>> codewordTable) throws IOException {
+    private void writeAllValueLengthsInMap(BufferedOutputStream bos, Map<ByteArrayWrapper, List<Boolean>> codewordTable) throws IOException {
         // first add the minimum bytes group key
         writeIntegerToFile(bos, codewordTable.get(minimumBytesGroup).size());
-        for (Map.Entry<String, List<Boolean>> entry : codewordTable.entrySet()){
+        for (Map.Entry<ByteArrayWrapper, List<Boolean>> entry : codewordTable.entrySet()){
             if (minimumBytesGroup.equals(entry.getKey())) {
                 continue;
             }
             writeIntegerToFile(bos, entry.getValue().size());
         }
     }
-    private void writeAllKeysInMap(BufferedOutputStream bos, Map<String, List<Boolean>> codewordTable) throws IOException {
+    private void writeAllKeysInMap(BufferedOutputStream bos, Map<ByteArrayWrapper, List<Boolean>> codewordTable) throws IOException {
         // first add the minimum bytes group key
-        bos.write(convertFromByteString(minimumBytesGroup));
-        for (Map.Entry<String, List<Boolean>> entry : codewordTable.entrySet()){
+        bos.write(minimumBytesGroup.getData());
+        for (Map.Entry<ByteArrayWrapper, List<Boolean>> entry : codewordTable.entrySet()){
             if (minimumBytesGroup.equals(entry.getKey())) {
                 continue;
             }
-            bos.write(convertFromByteString(entry.getKey()));
+            bos.write(entry.getKey().getData());
         }
     }
 
@@ -203,14 +191,5 @@ public class HuffmanCompressionHandler {
                                         (byte) (number >> 8), (byte) number};
         bos.write(numberBytes);
     }
-
-    private byte[] convertFromByteString(String byteString) {
-        String[] byteStrings = byteString.split(" ");
-
-        byte[] byteArray = new byte[byteStrings.length];
-        for (int i = 0; i < byteStrings.length; i++) {
-            byteArray[i] = Byte.parseByte(byteStrings[i]);
-        }
-        return byteArray;
-    }
 }
+
