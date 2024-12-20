@@ -14,17 +14,40 @@ public class HuffmanCompressionHandler {
     byte[] group;
     StringBuilder groupBuilder;
     ByteArrayWrapper groupWrapper;
-    public HuffmanCompressionHandler(int n, File inputFile) {
+    public HuffmanCompressionHandler(int n, String inputPath) {
         this.n = n;
         freq = new HashMap<>();
-        this.inputFile = inputFile;
+        this.inputFile = new File(inputPath);
         this.inputFileSize = inputFile.length();
         minimumBytesGroupLength = Integer.MAX_VALUE;
         groupBuilder = new StringBuilder();
         groupWrapper = new ByteArrayWrapper();
         group = new byte[n];
     }
-
+    void process() throws IOException {
+        long startProcessTime = System.currentTimeMillis();
+        // Read file in chunks
+        FileInputStream fis = new FileInputStream(inputFile);
+        BufferedInputStream bis = new BufferedInputStream(fis);
+        byte[] chunk = new byte[1024 * 1024 * n];
+        long nowFreqTime = System.currentTimeMillis();
+        int read = 0;
+        System.out.println("Calculating Frequencies..");
+        while ( (read = bis.read(chunk)) > 0) {
+            this.calculateFrequency(chunk, read);
+        }
+        System.out.print("Time taken calculating frequencies (sec): ");
+        System.out.println((System.currentTimeMillis()-nowFreqTime)/1000.0);
+        HuffmanCode huffmanCode = new HuffmanCode();
+        System.out.println("Building Huffman Tree..");
+        huffmanCode.buildTree(this.getFrequencyMap());
+        System.out.println("Building Huffman Codeword Table..");
+        Map<ByteArrayWrapper, List<Boolean>> codewordTable = huffmanCode.buildCodewordTable();
+        this.writeCompressedFile(codewordTable, huffmanCode.getTotalCodeLength());
+        System.out.print("> Total Time Taken To Compress The File (sec): ");
+        System.out.println((System.currentTimeMillis()-startProcessTime)/1000.0);
+        bis.close();
+    }
     void calculateFrequency(byte[] chunk, int read)  {
         for (int i = 0; i < read; i+=n) {
             int groupSize = 0;
@@ -61,8 +84,9 @@ public class HuffmanCompressionHandler {
         long writeDataTime= System.currentTimeMillis();
         System.out.println("Number Of Entries in hashmap = " + freq.size());
         writeData(bos, codewordTable);
-        System.out.println("Write data time: ");
+        System.out.print("Time taken writing compressed data (sec): ");
         System.out.println((System.currentTimeMillis() - writeDataTime)/1000.0);
+        System.out.println("> Compression Ratio: " + (double)outputFile.length()/inputFileSize);
         bos.close();
     }
 

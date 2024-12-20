@@ -18,8 +18,8 @@ public class HuffmanDecompressionHandler {
     private byte[][] keysInTable;
     private int payloadLength;
     private int payloadWritten;
-    public HuffmanDecompressionHandler(File inputFile) {
-        this.inputFile = inputFile;
+    public HuffmanDecompressionHandler(String inputPath) {
+        this.inputFile = new File(inputPath);
     }
 
     public int readInteger(BufferedInputStream bis) throws IOException {
@@ -41,7 +41,10 @@ public class HuffmanDecompressionHandler {
         return n;
     }
 
-    public void process(BufferedInputStream bis) throws IOException {
+    public void process() throws IOException {
+        long startProcessTime = System.currentTimeMillis();
+        FileInputStream fis = new FileInputStream(inputFile);
+        BufferedInputStream bis = new BufferedInputStream(fis);
         // Method to read N, minimumGroupLength, NumberOfEntries, totCodeLength, payloadLen, lengthsOfHuffmanCodings
         System.out.println("Reading header metadata..");
         n = readInteger(bis);
@@ -67,6 +70,9 @@ public class HuffmanDecompressionHandler {
 
         System.out.println("Decompressing the payload data..");
         readAndWriteData(bis, chunkBitLocation);
+
+        System.out.print("> Total Time Taken To Decompress The File (sec): ");
+        System.out.println((System.currentTimeMillis()-startProcessTime)/1000.0);
     }
 
     private void readLengthsOfHuffmanCodings(BufferedInputStream bis) throws IOException {
