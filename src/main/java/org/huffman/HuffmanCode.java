@@ -1,17 +1,15 @@
 package org.huffman;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.util.*;
 
 public class HuffmanCode {
     private HuffmanTreeNode huffmanTreeRoot;
-    private Map<String, List<Boolean>> codewordTable;
+    private Map<ByteArrayWrapper, List<Boolean>> codewordTable;
     private int totCodeLength = 0;
     private int payload = 0;
-    public void buildTree(Map<String, Integer> freq) {
+    public void buildTree(Map<ByteArrayWrapper, Integer> freq) {
         PriorityQueue<HuffmanTreeNode> pq = new PriorityQueue<>(Comparator.comparingInt(HuffmanTreeNode::getFreq));
-        for (Map.Entry<String, Integer> entry : freq.entrySet()){
+        for (Map.Entry<ByteArrayWrapper, Integer> entry : freq.entrySet()){
             pq.add(new HuffmanTreeNode(entry.getKey(), entry.getValue()));
         }
         while (pq.size() >= 2) {
@@ -23,7 +21,7 @@ public class HuffmanCode {
         }
         huffmanTreeRoot = pq.poll();
     }
-    public Map<String, List<Boolean>> buildCodewordTable() {
+    public Map<ByteArrayWrapper, List<Boolean>> buildCodewordTable() {
         codewordTable = new HashMap<>();
         dfs(huffmanTreeRoot, new ArrayList<>());
         return codewordTable;
@@ -49,20 +47,19 @@ public class HuffmanCode {
     }
 
     public int getTotalCodeLength() {
-        // paddingInValues = (8 - (totCodeLength % 8))%8;
         return totCodeLength;
     }
 
 
     private static class HuffmanTreeNode {
         private int freq;
-        private final String value;
+        private final ByteArrayWrapper value;
         private HuffmanTreeNode left;
         private HuffmanTreeNode right;
         public HuffmanTreeNode(){
             value = null;
         }
-        public HuffmanTreeNode(String value, int freq) {
+        public HuffmanTreeNode(ByteArrayWrapper value, int freq) {
             this.value=value;
             this.freq = freq;
             this.left = null;

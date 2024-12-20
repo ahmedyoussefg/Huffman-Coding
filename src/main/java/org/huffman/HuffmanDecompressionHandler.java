@@ -13,13 +13,13 @@ public class HuffmanDecompressionHandler {
     private int numberOfEntries;
     private int totCodeLength;
     private int[] lengthsOfHuffmanCodings;
-    private Map<String, Integer> mapValuesToIndex;
+    private Map<List<Boolean>, Integer> mapValuesToIndex;
     // private List<Byte> ans = new ArrayList<>();
     private byte[][] keysInTable;
     private int payloadLength;
     private int payloadWritten;
-    public HuffmanDecompressionHandler(File inputFile) {
-        this.inputFile = inputFile;
+    public HuffmanDecompressionHandler(String inputPath) {
+        this.inputFile = new File(inputPath);
     }
 
     public int readInteger(BufferedInputStream bis) throws IOException {
@@ -41,7 +41,10 @@ public class HuffmanDecompressionHandler {
         return n;
     }
 
-    public void process(BufferedInputStream bis) throws IOException {
+    public void process() throws IOException {
+        long startProcessTime = System.currentTimeMillis();
+        FileInputStream fis = new FileInputStream(inputFile);
+        BufferedInputStream bis = new BufferedInputStream(fis);
         // Method to read N, minimumGroupLength, NumberOfEntries, totCodeLength, payloadLen, lengthsOfHuffmanCodings
         System.out.println("Reading header metadata..");
         n = readInteger(bis);
@@ -67,6 +70,9 @@ public class HuffmanDecompressionHandler {
 
         System.out.println("Decompressing the payload data..");
         readAndWriteData(bis, chunkBitLocation);
+
+        System.out.print("> Total Time Taken To Decompress The File (sec): ");
+        System.out.println((System.currentTimeMillis()-startProcessTime)/1000.0);
     }
 
     private void readLengthsOfHuffmanCodings(BufferedInputStream bis) throws IOException {
@@ -102,7 +108,7 @@ public class HuffmanDecompressionHandler {
         boolean firstTime = true;
         for (int i = 0; i < numberOfEntries; i++) {
             int neededBits = lengthsOfHuffmanCodings[i];
-            StringBuilder currentBits = new StringBuilder();
+            List<Boolean> currentBits = new ArrayList<>();
             for (int j = 0; j < neededBits; j++) {
                 if (indexInChunk == Math.min(read, chunk.length) || firstTime) {
                     read = bis.read(chunk);
@@ -110,7 +116,7 @@ public class HuffmanDecompressionHandler {
                     indexInsideByte = 0;
                     firstTime = false;
                 }
-                currentBits.append(getIthByte(indexInsideByte, chunk[indexInChunk]));
+                currentBits.add(getIthBit(indexInsideByte, chunk[indexInChunk]));
 
                 indexInsideByte++;
                 if (indexInsideByte == 8) {
@@ -118,7 +124,7 @@ public class HuffmanDecompressionHandler {
                     indexInsideByte=0;
                 }
             }
-            mapValuesToIndex.put(currentBits.toString(), i);
+            mapValuesToIndex.put(currentBits, i);
         }
         int paddedToValues = (8 - (totCodeLength%8))%8;
         for (int steps = 0; steps < paddedToValues; steps++) {
@@ -131,8 +137,8 @@ public class HuffmanDecompressionHandler {
         return new ChunkBitLocation(chunk, indexInChunk, indexInsideByte, read);
     }
 
-    private String getIthByte(int indexInsideByte, byte chunk) {
-        return ((chunk >> (7 - indexInsideByte) & 1) == 1 ? "1" : "0");
+    private boolean getIthBit(int indexInsideByte, byte chunk) {
+        return ((chunk >> (7 - indexInsideByte) & 1) == 1);
     }
 
     private void readAndWriteData(BufferedInputStream bis, ChunkBitLocation chunkBitLocation) throws IOException {
@@ -141,7 +147,7 @@ public class HuffmanDecompressionHandler {
         File outputFile = new File(outputFilePath);
         FileOutputStream fos = new FileOutputStream(outputFile);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
-        StringBuilder currentBits = new StringBuilder();
+        List<Boolean> currentBits = new ArrayList<>();
         currentBits = getCurrentBits(bos, currentBits, chunkBitLocation.chunk, chunkBitLocation.read,
                 chunkBitLocation.indexInChunk, chunkBitLocation.indexInsideByte);
         if (payloadWritten >= payloadLength) {
@@ -163,17 +169,17 @@ public class HuffmanDecompressionHandler {
         bos.close();
     }
 
-    private StringBuilder getCurrentBits(BufferedOutputStream bos, StringBuilder currentBits, byte[] chunk, int read,
+    private List<Boolean> getCurrentBits(BufferedOutputStream bos, List<Boolean> currentBits, byte[] chunk, int read,
                                          int initialChunkIndex, int initialBitIndex) throws IOException {
         for (int j = initialChunkIndex; j < Math.min(chunk.length, read); j++) {
             for (int k = initialBitIndex; k < 8; k++) {
-                currentBits.append(getIthByte(k, chunk[j]));
-                if (mapValuesToIndex.containsKey(currentBits.toString())) {
-                    byte[] b = keysInTable[mapValuesToIndex.get(currentBits.toString())];
+                currentBits.add(getIthBit(k, chunk[j]));
+                if (mapValuesToIndex.containsKey(currentBits)) {
+                    byte[] b = keysInTable[mapValuesToIndex.get(currentBits)];
                     // ans.add(b[0]);
                     payloadWritten += b.length;
                     bos.write(b);
-                    currentBits = new StringBuilder();
+                    currentBits.clear();
                 }
                 if (payloadWritten >= payloadLength) {
                     return currentBits;
