@@ -7,20 +7,21 @@ import java.util.Map;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        String option = "d"; // compress or decompress
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\jetbrains-toolbox-2.5.2.35332.exe";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.jetbrains-toolbox-2.5.2.35332.exe.hc";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\gbbct10.seq";
-        String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.gbbct10.seq.hc";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\Algorithms - Lectures 7 and 8 (Greedy algorithms).pdf";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.5.Algorithms - Lectures 7 and 8 (Greedy algorithms).pdf.hc";
+        if (args.length < 2) {
+            System.out.println("Usage for compression: java -jar huffman_<id>.jar c <absolute_path_to_input_file> <n>");
+            System.out.println("Usage for decompression: java -jar huffman_<id>.jar d <absolute_path_to_input_file>");
+            return;
+        }
 
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.Algorithms - Lectures 7 (Greedy algorithms).pdf.hc";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\hello.txt";
-        // String inputPath = "D:\\CSE - Department\\Level 3\\First Semester\\Design and Analysis of Algorithms\\Prog Assignments\\Lab2\\HuffmanCoding\\test_cases\\21010217.1.hello.txt.hc";
+        String option = args[0]; // compress or decompress
+        String inputPath = args[1];
 
         if ("c".equals(option)) {
-            String nChar = "1";
+            if (args.length < 3) {
+                System.out.println("Usage for compression: java -jar huffman_<id>.jar c <absolute_path_to_input_file> <n>");
+                return;
+            }
+            String nChar = args[2];
             int n = Integer.parseInt(nChar);
             // compress
             compress(n, inputPath);

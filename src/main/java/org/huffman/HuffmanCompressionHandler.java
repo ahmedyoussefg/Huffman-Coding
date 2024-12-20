@@ -12,7 +12,6 @@ public class HuffmanCompressionHandler {
     private int minimumBytesGroupLength;
     private final long inputFileSize;
     byte[] group;
-    StringBuilder groupBuilder;
     ByteArrayWrapper groupWrapper;
     public HuffmanCompressionHandler(int n, String inputPath) {
         this.n = n;
@@ -20,7 +19,6 @@ public class HuffmanCompressionHandler {
         this.inputFile = new File(inputPath);
         this.inputFileSize = inputFile.length();
         minimumBytesGroupLength = Integer.MAX_VALUE;
-        groupBuilder = new StringBuilder();
         groupWrapper = new ByteArrayWrapper();
         group = new byte[n];
     }
