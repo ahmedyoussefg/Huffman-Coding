@@ -22,14 +22,13 @@ public class HuffmanCompressionHandler {
         minimumBytesGroupLength = Integer.MAX_VALUE;
         groupWrapper = new ByteArrayWrapper();
         group = new byte[n];
-        long closestPowerOfTwoNearN=(1L<<(int)Math.ceil(Math.log(n)/Math.log(2)));
-        chunkSize = 1024L * 1024L * closestPowerOfTwoNearN;
+        chunkSize = 1024L * 1024L * n;
         if (chunkSize >= Integer.MAX_VALUE) {
-            if (1024L * closestPowerOfTwoNearN >= Integer.MAX_VALUE) {
-                chunkSize = closestPowerOfTwoNearN;
+            if (1024L * n >= Integer.MAX_VALUE) {
+                chunkSize = n;
             }
             else
-                chunkSize = 1024L * closestPowerOfTwoNearN;
+                chunkSize = 1024L * n;
         }
     }
     void process() throws IOException {
