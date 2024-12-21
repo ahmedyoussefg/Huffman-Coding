@@ -13,6 +13,7 @@ public class HuffmanCompressionHandler {
     private final long inputFileSize;
     byte[] group;
     ByteArrayWrapper groupWrapper;
+    long chunkSize;
     public HuffmanCompressionHandler(int n, String inputPath) {
         this.n = n;
         freq = new HashMap<>();
@@ -21,13 +22,22 @@ public class HuffmanCompressionHandler {
         minimumBytesGroupLength = Integer.MAX_VALUE;
         groupWrapper = new ByteArrayWrapper();
         group = new byte[n];
+        long closestPowerOfTwoNearN=(1L<<(int)Math.ceil(Math.log(n)/Math.log(2)));
+        chunkSize = 1024L * 1024L * closestPowerOfTwoNearN;
+        if (chunkSize >= Integer.MAX_VALUE) {
+            if (1024L * closestPowerOfTwoNearN >= Integer.MAX_VALUE) {
+                chunkSize = closestPowerOfTwoNearN;
+            }
+            else
+                chunkSize = 1024L * closestPowerOfTwoNearN;
+        }
     }
     void process() throws IOException {
         long startProcessTime = System.currentTimeMillis();
         // Read file in chunks
         FileInputStream fis = new FileInputStream(inputFile);
         BufferedInputStream bis = new BufferedInputStream(fis);
-        byte[] chunk = new byte[1024 * 1024 * n];
+        byte[] chunk = new byte[(int) chunkSize];
         long nowFreqTime = System.currentTimeMillis();
         int read = 0;
         System.out.println("Calculating Frequencies..");
@@ -132,9 +142,10 @@ public class HuffmanCompressionHandler {
     }
 
     private void writeData(BufferedOutputStream bos, Map<ByteArrayWrapper, List<Boolean>> codewordTable) throws IOException {
+        freq.clear();
         FileInputStream fis = new FileInputStream(inputFile);
         BufferedInputStream bis = new BufferedInputStream(fis);
-        byte[] chunk = new byte[1024 * 1024 * n];
+        byte[] chunk = new byte[(int) chunkSize];
         int read = 0;
         // System.out.println("========WRITEDATA==========");
         List<Boolean> currentBits = new ArrayList<>();
